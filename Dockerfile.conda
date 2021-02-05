@@ -1,0 +1,54 @@
+# Copyright (c) Earthobservations Development Team.
+# Distributed under the terms of the MIT License.
+
+ARG BASE_CONTAINER=scioquiver/notebooks:cgspatial-notebook
+FROM $BASE_CONTAINER
+
+LABEL maintainer="Earthobservations Developers <earthobservations@panodata.org>"
+
+RUN conda config --set verbosity 2
+
+RUN conda --version
+
+#RUN conda create --name myenv
+
+# https://github.com/conda/conda/issues/7239#issuecomment-390502313
+#RUN conda install --name myenv --channel conda-canary conda
+#RUN conda --version
+
+# Fix `conda install` takes ages.
+
+# https://github.com/conda/conda/issues/7239#issuecomment-401671531
+RUN conda config \
+    --set safety_checks disabled \
+    --set add_pip_as_python_dependency false \
+    --set rollback_enabled false \
+    --set notify_outdated_conda false
+
+# https://github.com/conda/conda/issues/7690
+# https://github.com/conda/conda/issues/8197
+RUN conda config --set channel_priority strict
+RUN conda install --strict-channel-priority --override-channels --channel conda-forge --yes \
+    wetterdienst \
+    wradlib
+
+RUN conda clean --all --force-pkgs-dirs --yes && \
+    fix-permissions "${CONDA_DIR}" && \
+    fix-permissions "/home/${NB_USER}"
+
+RUN pip install \
+    luftdatenpumpe \
+    phenodata
+
+USER $NB_USER
+
+WORKDIR $HOME
+
+
+# Add RUN statements to install packages as the $NB_USER defined in the base images.
+
+# Add a "USER root" statement followed by RUN statements to install system packages using apt-get,
+# change file permissions, etc.
+
+# If you do switch to root, always be sure to add a "USER $NB_USER" command at the end of the
+# file to ensure the image runs as a unprivileged user by default.
